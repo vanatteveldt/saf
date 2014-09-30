@@ -92,6 +92,11 @@ class SAF(object):
                 if p2 != set(predicate) and p2.issubset(predicate):
                     for t in p2:
                         yield t
+            for source in self.sources:
+                # exclude sources from predicates
+                if set(source['source']).issubset(set(predicate)):
+                    for t in source['source']:
+                        yield t
         for clause in self.clauses:
             clause = clause.copy()
             contained = set(contained_tokens(clause['predicate']))
