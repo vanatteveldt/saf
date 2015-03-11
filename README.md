@@ -12,6 +12,15 @@ Note that this is not meant to be a perfect framework, but rather a simple way t
 
 Contributions for converting to/from other framework and from existing NLP tools are most welcome.
 
+Installing
+===
+
+You can install this module directly from github using:
+
+```{sh}
+pip install git+git://github.com/vanatteveldt/saf
+```
+
 Format specification
 ====
 
