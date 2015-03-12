@@ -9,4 +9,7 @@ packages=["saf"],
 classifiers=[
 "License :: OSI Approved :: MIT License",
 ],
+     install_requires=[
+"pygraphviz"
+],
 )
