@@ -32,13 +32,13 @@ def node_hook(saf, token_id):
     token = saf.get_token(token_id)
     label = token['word']
     labels = ["%s: %s" % (token['id'], token['word'])]
+    labels += ["%s / %s" % (token['lemma'], token['pos1'])]
     #labels += ["%s: %s" % (k, v)
     #           for k, v in token.__dict__.iteritems()
     #           if k not in VIS_IGNORE_PROPERTIES]
     return {"label": "\\n".join(labels)}
 
 def triple_hook(saf, triple):
-    print triple
     kargs = {'label': triple['relation']}
     return kargs
 

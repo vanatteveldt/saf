@@ -37,6 +37,12 @@ class SAF(object):
             tokens = self.tokens
         tokens = sorted(tokens, key = lambda t: (int(t['sentence']), int(t['offset'])))
 
+        # get entities (if available)
+        if 'entities' in self.saf:
+            for entity in self.entities:
+                for token in entity['tokens']:
+                    self.get_token(token)['entity'] = entity['type']
+        
         # get coreferences (if available)
         if 'coreferences' in self.saf:
             corefs = dict(self.get_coreferences())
