@@ -1,16 +1,33 @@
+import collections
+
 class SAF(object):
     def __init__(self, saf):
         self.saf = saf
         self._tokens = {t['id']: t for t in saf['tokens']}
+        self._children = None # cache token : [(rel, child), ...]
 
     def get_token(self, token_id):
         return self._tokens[token_id]
 
+    def get_parent(self, token):
+        self._cache_children()
+        for parent, children in self._children.iteritems():
+            for rel, child in children.iteritems():
+                if child == token:
+                    return rel, parent
+        
+
+    def _cache_children(self):
+        if self._children is None:
+            self._children = collections.defaultdict(list)
+            for rel in self.saf['dependencies']:
+                self._children[rel['parent']].append((rel['relation'], self.get_token(rel['child'])))
+            
     def get_children(self, token):
         if not isinstance(token, int): token = token['id']
-        return ((rel['relation'], self.get_token(rel['child']))
-                for rel in self.saf['dependencies'] if rel['parent'] == token)
-
+        self._cache_children()
+        return self._children[token]
+        
     def __getattr__(self, attr):
         try:
             return self.saf[attr]
