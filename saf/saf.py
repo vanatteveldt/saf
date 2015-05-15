@@ -12,9 +12,10 @@ class SAF(object):
     def get_parent(self, token):
         self._cache_children()
         for parent, children in self._children.iteritems():
-            for rel, child in children.iteritems():
+            for rel, child in children:
                 if child == token:
-                    return rel, parent
+                    return rel, self.get_token(parent)
+        return None, None
         
 
     def _cache_children(self):
@@ -27,13 +28,30 @@ class SAF(object):
         if not isinstance(token, int): token = token['id']
         self._cache_children()
         return self._children[token]
+
+    def get_child(saf, token, *rels, **criteria):
+        def _get_seq(v):
+            return v if isinstance(v, (list, tuple, set)) else [v]
+        for rel, child in saf.get_children(token):
+            if (not rels) or rel in rels:
+                if all(child[k] in _get_seq(v) for (k,v) in criteria.iteritems()):
+                    return child
         
     def __getattr__(self, attr):
-        try:
-            return self.saf[attr]
-        except KeyError:
-            return object.__getattribute__(self, attr)
+        if attr != "saf" and not attr.startswith("_"):
+            try:
+                return self.saf[attr]
+            except KeyError:
+                pass
+        return object.__getattribute__(self, attr)
 
+    def __setattr__(self, attr, val):
+        if attr == "saf" or attr.startswith("_"):
+            return super(SAF, self).__setattr__(attr, val)
+        else:
+            self.saf[attr] = val
+        
+            
     def get_tokens(self, sentence=None):
         """Return the tokens in this article or sentence ordered by sentence and offset"""
         tokens = self.saf['tokens']
@@ -99,6 +117,37 @@ class SAF(object):
 
         return tokens
 
+    def resolve_passive(self):
+        remove = set()
+        add = []
+        for tok in self.tokens:
+            if tok['lemma'] in ('word', 'ben'): # possible passive
+                verb = self.get_child(tok, "vc")
+                if not verb: continue
+                door = self.get_child(verb, "mod", lemma="door")
+                if not door: continue
+                if len(self.get_children(door)) != 1: continue
+                agent = self.get_child(door, "obj1")
+                if not agent: continue
+                # passive! remove tok and door, add verb - agent
+                remove |= {tok['id'], door['id']}
+                add += [{"relation": "agent", "parent": verb['id'], "child": agent['id']}]
+                for rel, child in self.get_children(tok):
+                    if rel not in ["su", "vc"]:
+                        add += [{"relation": rel, "parent": verb['id'], "child": child["id"]}]
+
+        if remove:
+            result = SAF(self.saf.copy())
+            result.tokens = [t for t in self.tokens if t['id'] not in remove]
+            deps = [dep for dep in self.dependencies
+                    if dep['parent'] not in remove
+                    and dep['child'] not in remove]
+            deps += add
+            result.dependencies = deps
+            return result
+        return self
+
+        
     def get_source(self, tokenids):
         "Return the source tokens (if any) of a source that contains all tokens"
         for source in self.sources:
