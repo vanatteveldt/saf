@@ -179,14 +179,19 @@ class SAF(object):
             yield clause
 
 
-    def get_root(self, sentence):
+    def get_roots(self, sentence):
         parents = {d['child'] : d['parent'] for d in self.saf['dependencies']
                    if self.get_token(d['child'])['sentence'] == sentence}
         # root is a parent that has no parents
-        roots = set(parents.values()) - set(parents.keys())
+        return (self.get_token(root) for root in parents.values()
+                if root not in set(parents.keys()))
+        
+            
+    def get_root(self, sentence):
+        roots = list(self.get_roots(sentence))
         if len(roots) != 1:
             raise ValueError("Sentence {sentence} has roots {roots}".format(**locals()))
-        return self.get_token(list(roots)[0])
+        return roots[0]
 
     def get_sentences(self):
         return sorted({t['sentence'] for t in self.saf['tokens']})
@@ -195,7 +200,7 @@ class SAF(object):
         # return a dict with the dept of each node
         rels = [d for d in self.saf['dependencies']
             if self.get_token(d['child'])['sentence'] == sentence]
-        generations = {self.get_root(sentence)['id'] : 0}
+        generations = {node['id']: 0 for node in self.get_roots(sentence)}
         changed = True
         while changed:
             changed = False
@@ -220,7 +225,8 @@ class SAF(object):
             for descendant in self.get_descendants(child, exclude):
                 yield descendant
 
-
+    def is_descendant(self, node, possible_ancestor):
+        return any(node == descendant['id'] for descendant in self.get_descendants(possible_ancestor))
 
 
     def get_coreferences(self):
