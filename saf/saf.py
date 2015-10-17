@@ -59,7 +59,7 @@ class SAF(object):
             tokens = [t for t in tokens if t['sentence'] == sentence]
         return sorted(tokens, key = lambda t: (int(t['sentence']), int(t['offset'])))
 
-    def resolve(self, ids=None):
+    def resolve(self, ids=None, **extra_attributes):
         """
         Resolve the given token ids (or the whole article) to dictionaries
         Will contain token information (lemma, pos) and additional information
@@ -70,8 +70,29 @@ class SAF(object):
             tokens = (self.get_token(id) for id in ids)
         else:
             tokens = self.tokens
-        tokens = sorted(tokens, key = lambda t: (int(t['sentence']), int(t['offset'])))
+        def get_offset(token):
+            sent = int(token['sentence'])
+            if 'offset' in token:
+                return sent, int(token['offset'])
+            else:
+                return sent, int(token['id'])
+            
+        tokens = sorted(tokens, key = get_offset)
 
+        # add extra attributes (if needed)
+        if extra_attributes:
+            for t in tokens:
+                t.update(extra_attributes)
+        
+        # add parents (if available)
+        if 'dependencies' in self.saf:
+            deps = {d['child']: d for d in self.saf['dependencies']}
+            for token in tokens:
+                if token['id'] in deps:
+                    token['parent'] = deps[token['id']]['parent']
+                    token['relation'] = deps[token['id']]['relation']
+                
+        
         # get entities (if available)
         if 'entities' in self.saf:
             for entity in self.entities:
